@@ -322,6 +322,29 @@ function get_commodity_benchmark(c::CommodityRef)
     end
 end
 
+function get_input_value(m, in::Input)
+    for d in m._demands
+        for cm in d.endowments
+            if get_name(cm.commodity) == get_full(in.commodity).name
+                return cm.quantity
+            else return get_total_inputs(m, in)
+            end
+        end
+    end
+end
+
+function get_total_inputs(m, in::Input)
+    inputs = []
+    for s in m._productions
+        for i in s.inputs
+            if in.commodity == i.commodity
+            push!(inputs,i.quantity)
+            end
+        end
+    end
+        return :(+(0., $(inputs...)))
+end
+
 function get_consumer_benchmark(c::ConsumerRef)
     if c.subindex===nothing
         return get_full(c).benchmark

@@ -23,7 +23,10 @@ function set_all_start_values(m)
     for s in m._productions
         for i in s.inputs
             compensated_input1_demand_name = get_comp_demand_name(i)
-            Complementarity.set_start_value(jm[compensated_input1_demand_name], eval(swap_our_param_with_val(i.quantity)))
+            Complementarity.set_start_value(jm[compensated_input1_demand_name], eval(swap_our_param_with_val(i.quantity))
+# Add a term to multiply by change in endowments
+            * eval(swap_our_param_with_val(get_input_value(m, i)))
+            / eval(swap_our_param_with_val(get_total_inputs(m, i))))
         end
     end
 
