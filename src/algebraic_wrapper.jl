@@ -38,6 +38,17 @@ function constraint_values(m::Model)
 end
 
 function Base.show(io::IO, m::AlgebraicWrapper)
+    d = JuMP.NLPEvaluator(m._source)
+
+    n = length(m._source.ext[:MCP])
+    Complementarity.JuMP.MOI.initialize(d, Symbol[])
+    output_vals = ones(n)
+    x_vals = Complementarity.get_initial_values_in_raw_index(m._source, m._source.ext[:MCP])
+
+    @info "Our input values are" x_vals
+    Complementarity.JuMP.MOI.eval_constraint(d, output_vals, x_vals)
+    @info "our output values are" output_vals
+
     println(io, "Mixed complementarity problem with $(length(m._source.ext[:MCP])) constraints:")
     constraint_strings = [JuMP.nl_expr_string(m._source, JuMP.REPLMode, m._source.nlp_data.nlexpr[c.F.index]) for c in m._source.ext[:MCP]]
     
@@ -69,6 +80,8 @@ function Base.show(io::IO, m::AlgebraicWrapper)
         else
             print(io, isinf(c.lb) ? "" : "$(c.lb) < ", c.var_name, isinf(c.ub) ? "" : " < $(c.ub)")
         end
+
+        print(io, " @ $(output_vals[i])")
 
         println(io)
     end
