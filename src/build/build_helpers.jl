@@ -14,6 +14,8 @@ function swap_our_param_with_jump_param(jm, expr)
             end
         elseif x isa CommodityRef
             get_jump_variable_for_commodity(jm, x)
+        elseif x isa ConsumerRef
+            get_jump_variable_for_consumer(jm, x)
         elseif x isa AuxRef
             get_jump_variable_for_aux(jm, x)
         elseif x isa SectorRef
@@ -45,6 +47,13 @@ function swap_our_param_with_val(expr)
             else
                 return c.benchmark[x.subindex]
             end
+        elseif x isa ConsumerRef
+            c = get_full(x)
+            if c isa ScalarConsumer
+                return c.benchmark
+            else
+                return c.benchmark[x.subindex]
+            end
         elseif x isa SectorRef
             s = get_full(x)
             if s isa ScalarSector
@@ -54,7 +63,7 @@ function swap_our_param_with_val(expr)
             end
         elseif x isa AuxRef
             a = get_full(x)
-            if a isa ScalarSector
+            if a isa ScalarAux
                 return a.benchmark
             else
                 return a.benchmark[x.subindex]
