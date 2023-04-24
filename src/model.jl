@@ -580,7 +580,19 @@ function add!(m::Model, p::Production)
             p.inputs[i] = new_input
         end
     end
+    for (i,v) in enumerate(p.outputs)        
+        if v.commodity isa Nest
+            sector_name = Symbol("$(get_name(p.sector))→$(v.commodity.name)")
+            commodity_name = Symbol("P$(get_name(p.sector))→$(v.commodity.name)")
+            sector_ref = add!(m, Sector(sector_name))
+            commodity_ref = add!(m, Commodity(commodity_name))
+            add!(m, Production(sector_ref, 0, v.commodity.tr_elasticity, [Output(commodity_ref, v.commodity.benchmark)], v.commodity.output))
 
+            new_output = Output(commodity_ref, v.quantity, v.taxes)
+            new_output.production_function = v.production_function
+            p.outputs[i] = new_output
+        end
+    end
     push!(m._productions, p)
     return m
 end
