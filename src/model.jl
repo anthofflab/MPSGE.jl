@@ -290,11 +290,33 @@ struct Production
     end
 end
 
-struct Nest
+abstract type Nest end;
+
+mutable struct ScalarNest <: Nest
     name::Symbol
     elasticity::Union{Float64,Expr}
     benchmark::Union{Float64,Expr}
-    inputs::Vector{Input}    
+    inputs::Vector{Input} 
+    
+    function ScalarNest(name::Symbol, elasticity::Union{Float64,Expr}, benchmark::Union{Float64,Expr}, inputs::Vector{Input})
+        return new(name, elasticity, benchmark, inputs)
+    end
+end
+
+mutable struct IndexedNest <: Nest
+    name::Symbol
+    elasticity::Union{Float64,Expr}
+    benchmark::Union{Float64,Expr}
+    inputs::Vector{Input} 
+    indices::Any
+    
+    function IndexedNest(name::Symbol, elasticity::Union{Float64,Expr}, benchmark::Union{Float64,Expr}, inputs::Vector{Input}; indices::Any)
+        return new(name, elasticity, benchmark, inputs, indices)
+    end
+end
+
+function Nest(name, elasticity, benchmark, inputs; indices=nothing)
+    return indices===nothing ? ScalarNest(name, elasticity, benchmark, inputs) : IndexedNest(name, elasticity, benchmark, inputs; indices)
 end
 
 struct Endowment
@@ -666,7 +688,7 @@ function add!(m::Model, p::Production)
     m._jump_model = nothing
 
     for (i,v) in enumerate(p.inputs)        
-        if v.commodity isa Nest
+        if v.commodity isa ScalarNest
             sector_name = Symbol("$(get_name(p.sector))→$(v.commodity.name)")
             commodity_name = Symbol("P$(get_name(p.sector))→$(v.commodity.name)")
             sector_ref = add!(m, Sector(sector_name))
@@ -676,6 +698,26 @@ function add!(m::Model, p::Production)
             new_input = Input(commodity_ref, v.quantity, taxes=v.taxes, price=v.price)
             new_input.production_function = v.production_function
             p.inputs[i] = new_input
+        end
+        if v.commodity isa IndexedNest
+
+            # temp_array = Array{SectorRef}(undef, length.(s.indices)...)
+
+            # for i in CartesianIndices(temp_array)
+            #     temp_array[i] = SectorRef(m, length(m._sectors), i, Tuple(s.indices[j][v] for (j,v) in enumerate(Tuple(i))))
+            # end
+            # return JuMP.Containers.DenseAxisArray(temp_array, s.indices...)
+        
+            # sector_name = Symbol("$(get_name(p.sector))→$(v.commodity.name)")
+            # commodity_name = Symbol("P$(get_name(p.sector))→$(v.commodity.name)")
+            # sector_ref = add!(m, Sector(sector_name))
+            # commodity_ref = add!(m, Commodity(commodity_name))
+            # add!(m, Production(sector_ref, 0, v.commodity.elasticity, [Output(commodity_ref, v.commodity.benchmark)], v.commodity.inputs))
+
+            # new_input = Input(commodity_ref, v.quantity, taxes=v.taxes, price=v.price)
+            # new_input.production_function = v.production_function
+            # p.inputs[i] = new_input
+
         end
     end
 
@@ -687,7 +729,7 @@ function add!(m::Model, c::DemandFunction)
     m._jump_model = nothing
 
     for (i,v) in enumerate(c.demands)        
-        if v.commodity isa Nest
+        if v.commodity isa ScalarNest
             sector_name = Symbol("$(get_name(c.consumer))→$(v.commodity.name)")
             commodity_name = Symbol("P$(get_name(c.consumer))→$(v.commodity.name)")
             sector_ref = add!(m, Sector(sector_name))
@@ -697,6 +739,20 @@ function add!(m::Model, c::DemandFunction)
             new_Input = Demand(commodity_ref, v.quantity)
             new_Input.demand_function = v.demand_function
             c.demands[i] = new_Input
+        end
+        if v.commodity isa IndexedNest
+
+
+            # sector_name = Symbol("$(get_name(c.consumer))→$(v.commodity.name)")
+            # commodity_name = Symbol("P$(get_name(c.consumer))→$(v.commodity.name)")
+            # sector_ref = add!(m, Sector(sector_name))
+            # commodity_ref = add!(m, Commodity(commodity_name))
+            # add!(m, Production(sector_ref, 0, v.commodity.elasticity, [Output(commodity_ref, v.commodity.benchmark)], v.commodity.inputs))
+
+            # new_Input = Demand(commodity_ref, v.quantity)
+            # new_Input.demand_function = v.demand_function
+            # c.demands[i] = new_Input
+
         end
     end
 
