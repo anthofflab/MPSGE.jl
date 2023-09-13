@@ -217,3 +217,81 @@ function set_all_parameters(m)
         end
     end
 end
+
+# loop through all Sectors, commodities, and Consumers, 
+# if not fixed, calculate Consumer #1, with all Aux set to benchmark value
+function set_default_numeraire(m)
+    jm = m._jump_model
+    for s in m._sectors
+        if s isa ScalarSector
+            jump_var = jm[s.name]
+            if JuMP.is_fixed(jump_var)
+                return                
+            end
+        else
+            for i in Iterators.product(s.indices...)
+                jump_var = jm[s.name][i...]
+                if JuMP.is_fixed(jump_var)
+                    return                
+                end
+            end
+        end
+    end
+    for c in m._commodities
+        if c isa ScalarCommodity
+            jump_var = jm[c.name]
+            if JuMP.is_fixed(jump_var)
+                return                
+            end
+        else
+            for i in Iterators.product(c.indices...)
+                jump_var = jm[c.name][i...]
+                if JuMP.is_fixed(jump_var)
+                    return                
+                end
+            end
+        end
+    end
+    for cs in m._consumers
+        if cs isa ScalarConsumer
+            jump_var = jm[cs.name]
+            if JuMP.is_fixed(jump_var)
+                return                
+            end
+        else
+            for i in Iterators.product(cs.indices...)
+                jump_var = jm[cs.name][i...]
+                if JuMP.is_fixed(jump_var)
+                    return                
+                end
+            end
+        end
+    end
+                                # println("What is m._demands[1].consumer? : ", typeof(get_full(m._demands[1].consumer)))
+    if get_full(m._demands[1].consumer) isa ScalarConsumer
+        jump_var = jm[get_full(m._demands[1].consumer).name]
+        if MPSGE.Complementarity.result_value(get_jump_variable_for_commodity(jm, m._demands[1].endowments[1].commodity)) === NaN
+            ConsValue = get_full(m._demands[1].consumer).benchmark
+        else
+            ConsValue =  eval(:(+($((:($(swap_our_param_with_val(en.quantity)) * $(MPSGE.Complementarity.result_value(get_jump_variable_for_commodity(jm, en.commodity)))) for en in m._demands[1].endowments)...))  +  $(swap_our_param_with_val(get_tax_revenue_for_consumer(jm, m, m._demands[1].consumer)))))#.args
+
+        end
+        JuMP.fix(jump_var, ConsValue, force=true)
+        return
+    else
+        for i in Iterators.product(get_full(m._demands[1].consumer).indices...)
+            jump_var = jm[get_full(m._demands[1].consumer).name][i...]
+
+            if MPSGE.Complementarity.result_value(get_jump_variable_for_commodity(jm, m._demands[1].endowments[1].commodity)) === NaN
+                ConsValue = get_consumer_benchmark(m._demands[1].consumer)
+                                # ConsValue = get_full(m._demands[1].consumer).benchmark[i]
+            else
+                ConsValue =  eval(:(+($((:($(swap_our_param_with_val(en.quantity)) * $(MPSGE.Complementarity.result_value(get_jump_variable_for_commodity(jm, en.commodity)))) for en in m._demands[1].endowments)...))  +  $(swap_our_param_with_val(get_tax_revenue_for_consumer(jm, m, m._demands[1].consumer)))))#.args
+                                # ConsValue =  eval(:(+($((:($(swap_our_param_with_val(en.quantity)) * $(MPSGE.Complementarity.result_value(get_jump_variable_for_commodity(jm, en.commodity)))) for en in m._demands[1].endowments)...))  +  $(swap_our_param_with_val(get_tax_revenue_for_consumer(m, m._demands[1].consumer)))))#.args
+                                # ConsValue =  :(+($((:($(swap_our_param_with_val(en.quantity)) * $(MPSGE.Complementarity.result_value(get_jump_variable_for_commodity(jm, en.commodity)))) for en in m._demands[1].endowments)...))  +  $(swap_our_param_with_val(get_tax_revenue_for_consumer(jm, m, m._demands[1].consumer))))#.args
+            end
+            JuMP.fix(jump_var, ConsValue, force=true)
+            return
+        end
+    end
+end
